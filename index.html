@@ -525,11 +525,12 @@
 // ──────────────────────────────────────
 // STATE
 // ──────────────────────────────────────
-let apiKey = 'server';
+let apiKey = 'server'; // API key is handled server-side
 let baseData = '';
 let conversationHistory = [];
 let isLoading = false;
 let baseLoaded = false;
+let pendingMessage = null;
 
 const BASE_URL = 'https://raw.githubusercontent.com/julianocominetti/Agente-Cantu/refs/heads/main/base_cantu_IA.txt';
 
@@ -636,10 +637,8 @@ function updateStatus(ok) {
 // LOAD BASE
 // ──────────────────────────────────────
 async function initSession() {
-  if (!apiKey) { showToast('Configure sua OpenAI API Key primeiro →', 'error'); return; }
   const btn = document.getElementById('loadBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span> Carregando base...';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Carregando base...'; }
   setProgress(true);
 
   try {
@@ -656,8 +655,10 @@ async function initSession() {
     setProgress(false);
     showToast('✅ Base carregada! Analisando dados...', 'success');
 
-    // Auto-send panorama
-    await sendToAPI('Carregue a base e mostre o panorama completo de todas as filiais com projeção para março. Exiba a tabela panorama, destaques e o menu.');
+    // Auto-send pending message or panorama
+    const msgToSend = pendingMessage || 'Carregue a base e mostre o panorama completo de todas as filiais com projeção para março. Exiba a tabela panorama, destaques e o menu.';
+    pendingMessage = null;
+    await sendToAPI(msgToSend);
   } catch (e) {
     btn.disabled = false;
     btn.innerHTML = '<span>🌿</span> Iniciar Agente & Carregar Base';
@@ -689,8 +690,9 @@ async function sendMessage() {
 
 function quickMsg(text) {
   if (!baseLoaded) {
-    document.getElementById('chatInput') && (document.getElementById('chatInput').value = text);
-    initSession().then(() => {});
+    // Store the pending message and init session, then send after base loads
+    pendingMessage = text;
+    initSession();
     return;
   }
   sendToAPI(text);
