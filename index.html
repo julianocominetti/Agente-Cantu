@@ -179,6 +179,26 @@ header{
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.7;transform:scale(.95);}}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-7px);}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* COOLDOWN TIMER */
+.cooldown-wrap{
+  display:none;
+  align-items:center;
+  gap:10px;
+  background:#fff8e1;
+  border:1px solid #ffe082;
+  border-radius:10px;
+  padding:8px 14px;
+  margin-bottom:8px;
+  font-size:12px;
+  color:#856404;
+}
+.cooldown-wrap.visible{display:flex;}
+.cooldown-icon{font-size:15px;flex-shrink:0;}
+.cooldown-text{flex:1;font-family:'Syne',sans-serif;font-weight:600;}
+.cooldown-track{flex:2;height:5px;background:#ffe082;border-radius:5px;overflow:hidden;}
+.cooldown-fill{height:100%;background:linear-gradient(90deg,#f57f17,#fbc02d);border-radius:5px;transition:width 1s linear;}
+.cooldown-secs{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#e65100;min-width:28px;text-align:right;}
 </style>
 </head>
 <body>
@@ -230,6 +250,13 @@ header{
 <div class="screen" id="chatScreen">
   <div class="messages" id="messages"></div>
   <div class="input-area">
+
+    <div class="cooldown-wrap" id="cooldownWrap">
+      <span class="cooldown-icon">⏳</span>
+      <span class="cooldown-text">Aguarde para a próxima pergunta</span>
+      <div class="cooldown-track"><div class="cooldown-fill" id="cooldownFill" style="width:100%"></div></div>
+      <span class="cooldown-secs" id="cooldownSecs">30s</span>
+    </div>
     <div class="input-box">
       <textarea class="chat-input" id="chatInput" rows="1"
         placeholder="Digite o número da opção ou faça uma pergunta..."
@@ -539,9 +566,45 @@ function sendToAPI(userText){
   })
   .finally(function(){
     isLoading=false;
-    document.getElementById('sendBtn').disabled=false;
-    document.getElementById('inputHint').textContent='Enter para enviar  •  Shift+Enter para nova linha';
+    startCooldown(10);
   });
+}
+
+
+var cooldownInterval=null;
+function startCooldown(secs){
+  var wrap=document.getElementById('cooldownWrap');
+  var fill=document.getElementById('cooldownFill');
+  var secsEl=document.getElementById('cooldownSecs');
+  var btn=document.getElementById('sendBtn');
+  var hint=document.getElementById('inputHint');
+  var input=document.getElementById('chatInput');
+
+  if(cooldownInterval) clearInterval(cooldownInterval);
+
+  btn.disabled=true;
+  input.disabled=true;
+  wrap.className='cooldown-wrap visible';
+  secsEl.textContent=secs+'s';
+  fill.style.width='100%';
+  hint.textContent='Aguarde '+secs+'s para a próxima pergunta...';
+
+  var remaining=secs;
+  var total=secs;
+  cooldownInterval=setInterval(function(){
+    remaining--;
+    secsEl.textContent=remaining+'s';
+    fill.style.width=((remaining/total)*100)+'%';
+    if(remaining<=0){
+      clearInterval(cooldownInterval);
+      cooldownInterval=null;
+      wrap.className='cooldown-wrap';
+      btn.disabled=false;
+      input.disabled=false;
+      hint.textContent='Enter para enviar  •  Shift+Enter para nova linha';
+      input.focus();
+    }
+  },1000);
 }
 
 function mdToHTML(md){
