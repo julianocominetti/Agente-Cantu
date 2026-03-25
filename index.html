@@ -199,6 +199,18 @@ header{
 .cooldown-track{flex:2;height:5px;background:#ffe082;border-radius:5px;overflow:hidden;}
 .cooldown-fill{height:100%;background:linear-gradient(90deg,#f57f17,#fbc02d);border-radius:5px;transition:width 1s linear;}
 .cooldown-secs{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#e65100;min-width:28px;text-align:right;}
+
+/* PDF BUTTON */
+.pdf-btn-wrap{display:flex;justify-content:flex-end;margin-top:8px;}
+.pdf-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#fff;border:1.5px solid #1e7d3a;border-radius:20px;
+  padding:6px 14px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+  color:#1e7d3a;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;
+  transition:all .18s;text-decoration:none;
+}
+.pdf-btn:hover{background:#1e7d3a;color:#fff;}
+.pdf-btn svg{width:13px;height:13px;fill:currentColor;}
 </style>
 </head>
 <body>
@@ -416,6 +428,20 @@ function appendMessage(role,text){
   tryRenderCharts(bubble, text);
   div.appendChild(avatar);
   div.appendChild(bubble);
+
+  // Add PDF download button for assistant messages
+  if(role === 'assistant'){
+    var pdfWrap = document.createElement('div');
+    pdfWrap.className = 'pdf-btn-wrap';
+    var pdfBtn = document.createElement('button');
+    pdfBtn.className = 'pdf-btn';
+    pdfBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M10,19L8,17L10,15V17H14V15L16,17L14,19V17H10V19M11,13H13V11H15V13H17V15H15V17H13V15H11V13H9V11H11V13Z"/></svg> Gerar PDF';
+    var capturedText = text;
+    pdfBtn.onclick = function(){ generatePDF(capturedText); };
+    pdfWrap.appendChild(pdfBtn);
+    div.appendChild(pdfWrap);
+  }
+
   container.appendChild(div);
   container.scrollTop=container.scrollHeight;
 }
@@ -566,7 +592,7 @@ function sendToAPI(userText){
   })
   .finally(function(){
     isLoading=false;
-    startCooldown(10);
+    startCooldown(15);
   });
 }
 
@@ -605,6 +631,120 @@ function startCooldown(secs){
       input.focus();
     }
   },1000);
+}
+
+
+function generatePDF(content) {
+  // Build HTML for PDF (print-friendly)
+  var today = new Date();
+  var dateStr = String(today.getDate()).padStart(2,'0') + '/' +
+                String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
+
+  var printContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Relatorio Executivo Cantu</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;font-size:11px;color:#1a2e1e;background:#fff;padding:0;}
+  .header{background:linear-gradient(135deg,#1e7d3a,#2aa84e);color:white;padding:20px 28px;display:flex;align-items:center;gap:16px;}
+  .header img{height:52px;}
+  .header h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin:0;}
+  .header p{font-size:10px;opacity:.8;margin-top:4px;}
+  .content{padding:20px 28px;}
+  h2{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#1e7d3a;margin:16px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #dde8df;}
+  h3{font-family:'Syne',sans-serif;font-size:12px;color:#1e7d3a;margin:12px 0 4px;}
+  p{line-height:1.6;margin:4px 0;font-size:11px;}
+  strong{font-weight:600;}
+  table{border-collapse:collapse;width:100%;font-size:10px;margin:8px 0;}
+  th{background:#1e7d3a;color:white;font-family:'Syne',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;padding:6px 8px;text-align:left;}
+  td{padding:6px 8px;border-bottom:1px solid #dde8df;color:#4a6b50;}
+  tr:last-child td{font-weight:700;color:#1a2e1e;background:#e8f5ec;}
+  tr:nth-child(even) td{background:#f7f9f8;}
+  ul{padding-left:16px;}
+  li{margin:3px 0;line-height:1.5;}
+  .footer{margin-top:24px;padding-top:8px;border-top:1px solid #dde8df;font-size:9px;color:#8aaa8e;text-align:center;font-style:italic;}
+  blockquote{border-left:3px solid #1e7d3a;padding:6px 12px;margin:8px 0;background:#e8f5ec;border-radius:0 6px 6px 0;font-size:10px;color:#4a6b50;}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <img src="https://raw.githubusercontent.com/julianocominetti/Agente-Cantu/refs/heads/main/logo_cantu.png"
+       onerror="this.style.display='none'" alt="Cantu"/>
+  <div>
+    <h1>Relatorio Executivo Cantu</h1>
+    <p>Analise de Faturamento e Margem | Emitido em: ` + dateStr + ` | Uso interno - Diretoria</p>
+  </div>
+</div>
+<div class="content">` + mdToPrintHTML(content) + `</div>
+<div class="content">
+  <div class="footer">Documento gerado em ` + dateStr + ` | Cantu Distribuidora — Uso interno restrito a Diretoria.</div>
+</div>
+</body></html>`;
+
+  var win = window.open('', '_blank');
+  win.document.write(printContent);
+  win.document.close();
+  win.onload = function(){
+    win.focus();
+    win.print();
+  };
+}
+
+function mdToPrintHTML(md) {
+  if(!md) return '';
+  var lines = md.split('\n');
+  var html = '';
+  var inTable = false, tableHTML = '', headerDone = false, inList = false;
+
+  for(var i=0; i<lines.length; i++){
+    var line = lines[i];
+    var t = line.trim();
+
+    if(t.charAt(0)==='|' && t.charAt(t.length-1)==='|'){
+      if(t.replace(/[\|\-\:\s]/g,'').length===0){
+        if(!headerDone){tableHTML+='</tr></thead><tbody>';headerDone=true;}
+        continue;
+      }
+      if(!inTable){
+        if(inList){html+='</ul>';inList=false;}
+        inTable=true;headerDone=false;
+        tableHTML='<table><thead><tr>';
+        var hc=t.split('|');
+        for(var c=0;c<hc.length;c++){var h=hc[c].trim();if(h)tableHTML+='<th>'+h+'</th>';}
+        continue;
+      }else{
+        tableHTML+='<tr>';
+        var dc=t.split('|');
+        for(var d=0;d<dc.length;d++){var dd=dc[d].trim();if(dd)tableHTML+='<td>'+dd+'</td>';}
+        tableHTML+='</tr>';continue;
+      }
+    }else if(inTable){inTable=false;tableHTML+='</tbody></table>';html+=tableHTML;tableHTML='';}
+
+    if(t===''){if(inList){html+='</ul>';inList=false;}continue;}
+    if(t.indexOf('### ')===0){html+='<h3>'+fmtP(t.slice(4))+'</h3>';continue;}
+    if(t.indexOf('## ')===0){html+='<h2>'+fmtP(t.slice(3))+'</h2>';continue;}
+    if(t.indexOf('# ')===0){html+='<h2>'+fmtP(t.slice(2))+'</h2>';continue;}
+    if(t.indexOf('> ')===0){html+='<blockquote>'+fmtP(t.slice(2))+'</blockquote>';continue;}
+    if(t.indexOf('- ')===0||t.indexOf('* ')===0){
+      if(!inList){html+='<ul>';inList=true;}
+      html+='<li>'+fmtP(t.slice(2))+'</li>';continue;
+    }
+    if(inList){html+='</ul>';inList=false;}
+    html+='<p>'+fmtP(t)+'</p>';
+  }
+  if(inTable)html+=tableHTML+'</tbody></table>';
+  if(inList)html+='</ul>';
+  return html;
+}
+
+function fmtP(text){
+  var p=text.split('**');var r='';
+  for(var i=0;i<p.length;i++) r+=i%2===1?'<strong>'+p[i]+'</strong>':p[i];
+  return r;
 }
 
 function mdToHTML(md){
